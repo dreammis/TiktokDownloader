@@ -2,7 +2,9 @@ import re
 import random
 import requests
 from bs4 import BeautifulSoup as bs
-from helper import random_ua, get_content
+
+from conf import proxies
+from utils.tk_other_download.helper import random_ua, get_content
 
 
 class downloader:
@@ -34,7 +36,10 @@ class downloader:
 
             data = {"url": url, "token": ""}
             ses.headers.update({"Content-Length": str(len(str(data)))})
-            res = ses.post("https://tiktap.io/api.php", data=data)
+            if proxies:
+                res = ses.post("https://tiktap.io/api.php", data=data, proxies=proxies)
+            else:
+                res = ses.post("https://tiktap.io/api.php", data=data)
             if res.json()["status"] != "success":
                 return False
 
@@ -62,7 +67,10 @@ class downloader:
             ses = requests.Session()
             ses.headers.update({"User-Agent": random_ua()})
 
-            res = ses.get("https://snaptik.pro/")
+            if proxies:
+                res = ses.get("https://snaptik.pro/", proxies=proxies)
+            else:
+                res = ses.get("https://snaptik.pro/")
             token = re.search(
                 '<input type="hidden" name="token" value="(.*?)">', res.text
             ).group(1)
@@ -91,7 +99,11 @@ class downloader:
         try:
             ses = requests.Session()
             ses.headers.update({"User-Agent": random_ua()})
-            res = ses.get("https://tiktokio.com/id/")
+            if proxies:
+                res = ses.get("https://tiktokio.com/id/", proxies=proxies)
+            else:
+                res = ses.get("https://tiktokio.com/id/")
+
             open("hasil.html", "w", encoding="utf-8").write(res.text)
             prefix = re.search(
                 r'<input type="hidden" name="prefix" value="(.*?)"/>', res.text
@@ -135,7 +147,10 @@ class downloader:
                 "https://europe-west3-instadown-314417.cloudfunctions.net/yt-dlp-1?url="
                 + url
             )
-            res = requests.get(api, headers=headers)
+            if proxies:
+                res = requests.get(api, headers=headers, proxies=proxies)
+            else:
+                res = requests.get(api, headers=headers)
             if res.text[0] != "{":
                 return False
 
@@ -168,9 +183,14 @@ class downloader:
 
                 data[i.get("name")] = i.get("value")
 
-            res = ses.post(
-                "https://musicaldown.com/download", data=data, allow_redirects=True
-            )
+            if proxies:
+                res = ses.post(
+                    "https://musicaldown.com/download", data=data, allow_redirects=True, proxies=proxies
+                )
+            else:
+                res = ses.post(
+                    "https://musicaldown.com/download", data=data, allow_redirects=True
+                )
             if res.text.find("Convert Video Now") >= 0:
                 data = re.search(r"data: '(.*?)'", res.text).group(1)
                 urlSlider = re.search(r"url: '(.*?)'", res.text).group(1)
