@@ -95,7 +95,7 @@ Donation :
                 send_video(user_id, video_name, msg)
                 return
 
-            res = dl.tikmatecc(text)
+            # res = dl.tikmatecc(text)
             if res:
                 print("[+] success download with tikmatecc !")
                 delete_message(user_id, message_id)

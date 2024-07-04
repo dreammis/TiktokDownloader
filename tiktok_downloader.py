@@ -10,6 +10,7 @@ class downloader:
         self.output_name = output_name
 
     def tiktapio(self, url: str):
+        # 已失效
         try:
             ses = requests.Session()
             ses.headers.update(
@@ -56,6 +57,7 @@ class downloader:
             return False
 
     def snaptikpro(self, url: str):
+        # tk 可用 抖音不可用
         try:
             ses = requests.Session()
             ses.headers.update({"User-Agent": random_ua()})
@@ -85,6 +87,7 @@ class downloader:
             return False
 
     def tiktapiocom(self, url: str):
+        # tk & douyin 可用
         try:
             ses = requests.Session()
             ses.headers.update({"User-Agent": random_ua()})
@@ -119,6 +122,7 @@ class downloader:
             return False
 
     def tikmatecc(self, url: str):
+        # 已失效
         try:
             headers = {
                 "Host": "europe-west3-instadown-314417.cloudfunctions.net",
@@ -148,6 +152,7 @@ class downloader:
             return False
 
     def musicaldown(self, url: str):
+        # tk 可用 douyin 不可用
         try:
             ses = requests.Session()
             ses.headers.update({"User-Agent": random_ua()})
