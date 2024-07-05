@@ -6,6 +6,8 @@ import requests
 from tqdm import tqdm
 
 from conf import proxies
+from utils.file_format import check_file
+from utils.request_retry import requests_retry_session
 
 browser_useragent = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
@@ -54,42 +56,45 @@ def get_content(url: str, output_name: str, retry_count=0, max_retries=5):
     if retry_count > max_retries:
         print("Reached maximum retry limit, stopping retries.")
         return False
-
     try:
-        # Check if the file already exists and its size
-        if os.path.exists(output_name):
-            start = os.path.getsize(output_name)
-        else:
-            start = 0
+        response = requests_retry_session().get(url, stream=True, timeout=(10, 30))
 
-        # Make a HEAD request to get the total size of the file
-        head_res = requests.head(url)
-        if not head_res.ok:
-            print(f"Failed to retrieve file info: {head_res.status_code}")
-            return False
+        if response.status_code == 200:
+            # 尝试获取响应头中的文件名
+            total_size_in_bytes = int(response.headers.get('content-length', 0))
+            progress_bar = tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True)
 
-        total_size = int(head_res.headers.get('content-length', 0))
-        if start >= total_size:
-            print(f"File already completely downloaded: {output_name}")
-            return True
+            content_length = int(response.headers.get('content-length', 0))
 
-        # Set headers for partial download if needed
-        headers = {'Range': f'bytes={start}-'} if start else {}
-        res = requests.get(url, headers=headers, stream=True)
+            # 增加判断是否图书文件已存在，避免重复工作
+            if check_file(output_name):
+                print(f"文件已存在: {output_name}")
+                progress_bar.close()
+                return True
 
-        with open(output_name, "ab") as file:
-            with tqdm(total=total_size, initial=start, unit='B', unit_scale=True, desc=output_name) as progress:
-                for chunk in res.iter_content(chunk_size=1024):
-                    if chunk:
+            # Check if file already exists and resume download if partial file exists
+            existing_size = os.path.getsize(output_name) if os.path.exists(output_name) else 0
+            if existing_size < content_length:
+                with open(output_name, 'ab') as file, tqdm(total=content_length, initial=existing_size, unit='iB',
+                                                           unit_scale=True) as progress_bar:
+                    for chunk in response.iter_content(chunk_size=1024):
                         file.write(chunk)
-                        progress.update(len(chunk))
+                        progress_bar.update(len(chunk))
+                progress_bar.close()
 
-        # Check if download is complete
-        if os.path.getsize(output_name) < total_size:
-            print("Download incomplete, will retry.")
+            # Verify download integrity
+            if os.path.getsize(output_name) != content_length:
+                print(f"Download incomplete or corrupted: {output_name}")
+                return get_content(url, output_name, retry_count + 1)  # Retry download
+            print(f"Download successful: {output_name}")
+            return True
+        else:
+            print("下载失败，状态码：", response.status_code)
+
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+        if retry_count < max_retries:
             return get_content(url, output_name, retry_count + 1, max_retries)
-        return True
-
-    except requests.RequestException as e:
-        print(f"Download failed due to an exception, retrying... ({retry_count + 1}/{max_retries})")
-        return get_content(url, output_name, retry_count + 1, max_retries)
+        else:
+            print("Failed after retrying.")
+            return False
