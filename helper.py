@@ -57,35 +57,27 @@ def get_content(url: str, output_name: str, retry_count=0, max_retries=5):
         print("Reached maximum retry limit, stopping retries.")
         return False
     try:
-        response = requests_retry_session().get(url, stream=True, timeout=(10, 30))
+        response = requests_retry_session().get(url, stream=True, timeout=(30, 60))
 
         if response.status_code == 200:
             # 尝试获取响应头中的文件名
             total_size_in_bytes = int(response.headers.get('content-length', 0))
             progress_bar = tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True)
-
-            content_length = int(response.headers.get('content-length', 0))
-
-            # 增加判断是否图书文件已存在，避免重复工作
-            if check_file(output_name):
-                print(f"文件已存在: {output_name}")
-                progress_bar.close()
-                return True
-
-            # Check if file already exists and resume download if partial file exists
-            existing_size = os.path.getsize(output_name) if os.path.exists(output_name) else 0
-            if existing_size < content_length:
-                with open(output_name, 'ab') as file, tqdm(total=content_length, initial=existing_size, unit='iB',
-                                                           unit_scale=True) as progress_bar:
-                    for chunk in response.iter_content(chunk_size=1024):
-                        file.write(chunk)
-                        progress_bar.update(len(chunk))
-                progress_bar.close()
+            # Always start a new download
+            with open(output_name, 'wb') as file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    file.write(chunk)
+                    progress_bar.update(len(chunk))
+            progress_bar.close()
 
             # Verify download integrity
-            if os.path.getsize(output_name) != content_length:
+            if os.path.getsize(output_name) != total_size_in_bytes:
                 print(f"Download incomplete or corrupted: {output_name}")
-                return get_content(url, output_name, retry_count + 1)  # Retry download
+                if retry_count < max_retries:
+                    return get_content(url, output_name, retry_count + 1, max_retries)
+                else:
+                    print("Failed after retrying.")
+                    return False
             print(f"Download successful: {output_name}")
             return True
         else:
