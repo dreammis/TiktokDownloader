@@ -1,6 +1,7 @@
 import os
 import random
 import time
+from pathlib import Path
 
 import requests
 from DownloadKit import DownloadKit
@@ -104,6 +105,7 @@ def get_content_temp(url: str, output_name: str):
     if url.lower().endswith('.mp3'):
         return False  # Skip download if URL is an MP3 file
     d = DownloadKit()
-    result, _ = d.download(url, rename=output_name, file_exists='overwrite', show_msg=True)
+    output_name = Path(output_name)
+    result, _ = d.download(url, goal_path=output_name.parent, rename=output_name.name, file_exists='overwrite', show_msg=True)
     return result
 
