@@ -3,6 +3,7 @@ import random
 import time
 
 import requests
+from DownloadKit import DownloadKit
 from tqdm import tqdm
 
 from conf import proxies
@@ -65,7 +66,7 @@ def get_content(url: str, output_name: str, retry_count=0, max_retries=5):
             progress_bar = tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True)
             # Always start a new download
             with open(output_name, 'wb') as file:
-                for chunk in response.iter_content(chunk_size=8192):
+                for chunk in response.iter_content(chunk_size=128):
                     file.write(chunk)
                     progress_bar.update(len(chunk))
             progress_bar.close()
@@ -90,3 +91,19 @@ def get_content(url: str, output_name: str, retry_count=0, max_retries=5):
         else:
             print("Failed after retrying.")
             return False
+
+
+def get_content_temp(url: str, output_name: str):
+    """
+    Download content from URL with progress bar, support for resuming download, retry mechanism, and checks for completed download.
+
+    :param url: URL of the content to be downloaded
+    :param output_name: Local file path to save the downloaded content
+    :return: Boolean indicating the success of the download
+    """
+    if url.lower().endswith('.mp3'):
+        return False  # Skip download if URL is an MP3 file
+    d = DownloadKit()
+    result, _ = d.download(url, rename=output_name, file_exists='overwrite', show_msg=True)
+    return result
+
