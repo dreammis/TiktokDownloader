@@ -59,7 +59,7 @@ def get_content(url: str, output_name: str, retry_count=0, max_retries=5):
         print("Reached maximum retry limit, stopping retries.")
         return False
     try:
-        response = requests_retry_session().get(url, stream=True, timeout=(120, 240))
+        response = requests_retry_session().get(url, stream=True, timeout=(120, 240), headers={"User-Agent": random_ua()})
 
         if response.status_code == 200:
             # 尝试获取响应头中的文件名
